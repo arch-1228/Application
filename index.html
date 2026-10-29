@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TixShift | Verified Bus Ticket Transfer & Escrow Marketplace</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts & FontAwesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+              900: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .qr-scan-line {
+      animation: scan 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes scan {
+      0%, 100% { top: 6%; opacity: 0.8; }
+      50% { top: 88%; opacity: 1; }
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Top Announcement Bar -->
+  <div class="bg-gradient-to-r from-brand-900 via-indigo-900 to-slate-900 text-white text-xs py-2 px-4 shadow-sm border-b border-indigo-950">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+          <i class="fa-solid fa-bolt text-[11px]"></i> Instant PNR-Verified Settlement
+        </span>
+        <span class="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 font-semibold px-2.5 py-0.5 rounded-full border border-amber-500/30">
+          <i class="fa-solid fa-scale-balanced text-[11px]"></i> Strict MRP Cap (Zero Scalping)
+        </span>
+      </div>
+      <div class="text-slate-300 flex items-center gap-4 text-[11px]">
+        <span><i class="fa-solid fa-user-shield text-emerald-400 mr-1"></i>100% Seller No-Show Protection</span>
+        <span class="hidden md:inline"><i class="fa-solid fa-bolt text-amber-400 mr-1"></i>Instant UPI Payouts on Purchase</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Primary Header -->
+  <header class="bg-white/95 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Brand Logo -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('browse')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+            <i class="fa-solid fa-ticket-simple text-xl -rotate-12"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xl font-extrabold tracking-tight text-slate-900">Tix<span class="text-brand-600">Shift</span></span>
+              <span class="text-[10px] bg-brand-50 text-brand-700 font-bold px-1.5 py-0.5 rounded border border-brand-200">INDIA</span>
+            </div>
+            <p class="text-[11px] text-slate-500 font-medium hidden sm:block">Verified Peer-to-Peer Intercity Bus Seat Transfer</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs & Wallet Pill -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <nav class="flex items-center gap-1 sm:gap-1.5">
+            <button id="nav-browse" onclick="switchTab('browse')" class="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all text-brand-600 bg-brand-50 flex items-center gap-1.5 sm:gap-2">
+              <i class="fa-solid fa-magnifying-glass text-xs"></i>
+              <span class="hidden md:inline">Find Tickets</span>
+              <span class="md:hidden">Find</span>
+            </button>
+            <button id="nav-mytickets" onclick="switchTab('mytickets')" class="relative px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 sm:gap-2">
+              <i class="fa-solid fa-ticket text-xs"></i>
+              <span class="hidden md:inline">My Passes</span>
+              <span class="md:hidden">Passes</span>
+              <span id="badge-pass-count" class="bg-brand-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">0</span>
+            </button>
+            <button id="nav-wallet" onclick="switchTab('wallet')" class="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 sm:gap-2">
+              <i class="fa-solid fa-wallet text-xs"></i>
+              <span class="hidden md:inline">Wallet & Ledger</span>
+              <span class="md:hidden">Wallet</span>
+            </button>
+            <button id="nav-safety" onclick="switchTab('safety')" class="px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100 hidden lg:flex items-center gap-2">
+              <i class="fa-solid fa-shield-check text-xs"></i>
+              <span>Safety</span>
+            </button>
+          </nav>
+
+          <!-- Top Wallet Pill with Quick Deposit -->
+          <div class="flex items-center gap-1 bg-slate-100/90 border border-slate-200/90 rounded-xl p-1 pl-2.5">
+            <div class="flex items-center gap-1.5 cursor-pointer" onclick="switchTab('wallet')">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span class="text-[10px] uppercase font-bold text-slate-500 hidden sm:inline">Bal:</span>
+              <span id="nav-wallet-balance" class="text-xs sm:text-sm font-mono font-extrabold text-slate-900">₹2,450</span>
+            </div>
+            <button onclick="openAddMoneyModal()" title="Add Money" class="w-6 h-6 rounded-lg bg-white hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 border border-slate-200 flex items-center justify-center text-xs shadow-xs transition-colors">
+              <i class="fa-solid fa-plus text-[10px]"></i>
+            </button>
+          </div>
+
+          <!-- Sell Button / User Profile -->
+          <div class="flex items-center gap-2">
+            <button id="nav-sell" onclick="openSellModal()" class="px-3 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all text-white bg-brand-600 hover:bg-brand-700 shadow-sm shadow-brand-600/30 flex items-center gap-1.5">
+              <i class="fa-solid fa-plus-circle text-xs"></i>
+              <span class="hidden sm:inline">Sell Seat</span>
+              <span class="sm:hidden">Sell</span>
+            </button>
+            <button id="user-profile-btn" onclick="openLoginModal()" class="px-2.5 py-2 text-xs font-bold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-user-circle text-sm text-brand-600"></i>
+              <span id="user-profile-name" class="hidden sm:inline">Login</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: BROWSE & SEARCH TICKETS -->
+    <!-- ========================================== -->
+    <section id="tab-browse" class="space-y-6">
+      
+      <!-- Hero Banner & Route Finder -->
+      <div class="relative bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-950 rounded-2xl p-6 sm:p-8 text-white shadow-xl overflow-hidden border border-slate-800">
+        <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none text-9xl">
+          <i class="fa-solid fa-bus-simple"></i>
+        </div>
+
+        <div class="max-w-2xl relative z-10 mb-6">
+          <span class="inline-block bg-white/10 backdrop-blur-md text-brand-200 text-xs font-semibold px-3 py-1 rounded-full mb-3 border border-white/10">
+            <i class="fa-regular fa-clock mr-1"></i> Missed a trip or plans changed? Save money safely.
+          </span>
+          <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
+            Buy & Transfer Confirmed Bus Seats at Fair Prices
+          </h1>
+          <p class="text-sm sm:text-base text-slate-300 mt-2 font-normal">
+            Sellers get money back without high cancellation penalties. Buyers get verified sleeper berths at or below face value. Zero scalping.
+          </p>
+        </div>
+
+        <!-- Search Control Box -->
+        <div class="bg-white rounded-xl p-4 sm:p-5 shadow-2xl text-slate-800 border border-slate-100">
+          <form id="search-filter-form" onsubmit="event.preventDefault(); applySearchFilters();" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            
+            <!-- From City -->
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">From</label>
+              <div class="relative">
+                <i class="fa-solid fa-location-dot absolute left-3 top-3 text-slate-400 text-sm"></i>
+                <select id="filter-from" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  <option value="">All Origins</option>
+                  <option value="Bengaluru" selected>Bengaluru</option>
+                  <option value="Hyderabad">Hyderabad</option>
+                  <option value="Mumbai">Mumbai</option>
+                  <option value="Pune">Pune</option>
+                  <option value="Chennai">Chennai</option>
+                  <option value="Goa">Goa</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- To City -->
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">To</label>
+              <div class="relative">
+                <i class="fa-solid fa-location-crosshairs absolute left-3 top-3 text-brand-600 text-sm"></i>
+                <select id="filter-to" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  <option value="">All Destinations</option>
+                  <option value="Hyderabad">Hyderabad</option>
+                  <option value="Bengaluru">Bengaluru</option>
+                  <option value="Goa">Goa</option>
+                  <option value="Pune">Pune</option>
+                  <option value="Chennai">Chennai</option>
+                  <option value="Mumbai">Mumbai</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Travel Date -->
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Journey Date</label>
+              <div class="relative">
+                <i class="fa-regular fa-calendar-days absolute left-3 top-3 text-slate-400 text-sm"></i>
+                <input type="date" id="filter-date" value="2026-10-23" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+              </div>
+            </div>
+
+            <!-- Seating Type / Gender Rule -->
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Berth / Gender Tag</label>
+              <div class="relative">
+                <i class="fa-solid fa-venus-mars absolute left-3 top-3 text-slate-400 text-sm"></i>
+                <select id="filter-gender" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  <option value="all">Any Seating</option>
+                  <option value="female">Solo Female Friendly</option>
+                  <option value="sleeper">AC Sleeper Only</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Search Action -->
+            <div class="flex items-end">
+              <button type="submit" class="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white rounded-lg text-sm font-bold shadow-md shadow-brand-600/30 transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-filter text-xs"></i>
+                <span>Filter Seats</span>
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+      <!-- Live Feed Header & Stats -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-bold text-slate-900">Verified Available Tickets</h2>
+            <span id="ticket-count-badge" class="bg-slate-200 text-slate-800 text-xs font-bold px-2.5 py-0.5 rounded-full">4 Available</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Real tickets listed by verified travelers holding confirmed PNRs.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate-500">Sort by:</span>
+          <select id="sort-select" onchange="renderTicketCards()" class="text-xs font-semibold bg-white border border-slate-200 rounded-md py-1.5 px-2.5 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <option value="time">Earliest Departure</option>
+            <option value="price-low">Lowest Price</option>
+            <option value="discount">Highest Discount</option>
+          </select>
+          <button onclick="resetFilters()" class="text-xs font-medium text-brand-600 hover:underline">Reset</button>
+        </div>
+      </div>
+
+      <!-- Tickets Grid Container -->
+      <div id="tickets-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5"></div>
+
+      <!-- Empty State Container -->
+      <div id="no-tickets-found" class="hidden text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 p-8">
+        <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 text-2xl mb-4">
+          <i class="fa-solid fa-bus"></i>
+        </div>
+        <h3 class="text-base font-bold text-slate-900">No transferred seats matching your route</h3>
+        <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">Try clearing filters or search for popular hubs like Bengaluru or Hyderabad.</p>
+        <button onclick="resetFilters()" class="px-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-semibold">View All Active Tickets</button>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: MY PURCHASED PASSES -->
+    <!-- ========================================== -->
+    <section id="tab-mytickets" class="hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">My Purchased Passes</h2>
+          <p class="text-xs text-slate-500">Your purchased boarding passes with anti-fraud dynamic rolling QR codes.</p>
+        </div>
+      </div>
+      <div id="purchased-passes-container" class="space-y-6"></div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: WALLET & TRANSACTION HISTORY -->
+    <!-- ========================================== -->
+    <section id="tab-wallet" class="hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Wallet & Settlement Ledger</h2>
+          <p class="text-xs text-slate-500">Track available balances, active seat listings, and instantaneous UPI payouts.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openAddMoneyModal()" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2">
+            <i class="fa-solid fa-arrow-down-to-bracket text-emerald-400"></i>
+            <span>Add Funds</span>
+          </button>
+          <button onclick="openWithdrawModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2">
+            <i class="fa-solid fa-arrow-up-from-bracket"></i>
+            <span>Withdraw to UPI</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Financial KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 rounded-2xl border border-slate-800 shadow-md">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Available Wallet Cash</span>
+          <div class="text-3xl font-extrabold font-mono mt-2" id="wallet-available-kpi">₹2,450</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Instant Purchase Transfers</span>
+          <div class="text-3xl font-extrabold font-mono text-slate-900 mt-2" id="wallet-escrow-kpi">₹999</div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Lifetime Recouped</span>
+          <div class="text-3xl font-extrabold font-mono text-slate-900 mt-2" id="wallet-lifetime-kpi">₹3,820</div>
+        </div>
+      </div>
+
+      <!-- Ledger Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Ledger & My Active Listings</h3>
+            <p class="text-xs text-slate-500">Track active seat listings, purchases, and payouts.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+            <button onclick="filterTransactions('all')" id="tx-filter-all" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-xs">All</button>
+            <button onclick="filterTransactions('purchase')" id="tx-filter-purchase" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600">Purchases</button>
+            <button onclick="filterTransactions('sale')" id="tx-filter-sale" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600">Sales & Listings</button>
+            <button onclick="filterTransactions('wallet')" id="tx-filter-wallet" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600">Wallet</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                <th class="py-3 px-4">Transaction ID & Date</th>
+                <th class="py-3 px-4">Type & Details</th>
+                <th class="py-3 px-4">Route / Operator</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Action / Amount</th>
+              </tr>
+            </thead>
+            <tbody id="transaction-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: SAFETY -->
+    <!-- ========================================== -->
+    <section id="tab-safety" class="hidden space-y-8">
+      <div class="text-center max-w-3xl mx-auto space-y-2">
+        <h2 class="text-3xl font-extrabold text-slate-900">How TixShift Protects Passengers & Sellers</h2>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODALS -->
+  <div id="modal-login" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-xs space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <h3 class="text-sm font-bold text-slate-900">Mobile OTP Login & Profile</h3>
+        <button onclick="closeLoginModal()" class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><i class="fa-solid fa-xmark text-xs"></i></button>
+      </div>
+      <div id="login-step-1" class="space-y-3">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mobile Number *</label>
+          <div class="flex">
+            <span class="px-3 py-2 bg-slate-100 border border-r-0 border-slate-200 rounded-l-lg font-mono font-bold text-slate-600">+91</span>
+            <input type="tel" id="login-phone" placeholder="9876543210" maxlength="10" class="w-full px-3 py-2 border border-slate-200 rounded-r-lg font-mono font-bold focus:outline-none">
+          </div>
+        </div>
+        <button onclick="sendOtp()" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg text-xs">Get OTP</button>
+      </div>
+      <div id="login-step-2" class="space-y-3 hidden">
+        <div class="p-2.5 bg-brand-50 rounded-lg text-brand-800 text-[11px]">OTP sent. (Simulated OTP: <strong class="font-mono">1234</strong>)</div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Enter 4-Digit OTP</label>
+          <input type="text" id="login-otp" placeholder="1234" maxlength="4" class="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-center font-bold text-base tracking-widest">
+        </div>
+        <button onclick="verifyOtp()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs">Verify & Sign In</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-sell" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl border border-slate-100">
+      <div class="sticky top-0 bg-white px-6 py-4 border-b border-slate-200 flex items-center justify-between z-10">
+        <h3 class="text-lg font-bold text-slate-900">List Your Confirmed Bus Seat</h3>
+        <button onclick="closeSellModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="sell-form" onsubmit="handleSellSubmit(event)" class="p-6 space-y-4 text-xs">
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <label class="block font-bold text-slate-800">Enter Booking PNR / Reference ID *</label>
+          <div class="flex gap-2">
+            <input type="text" id="sell-pnr-input" placeholder="Try: VRL-98421" required class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono uppercase font-bold">
+            <button type="button" onclick="autoFetchTicketDetails()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs">Auto-Fetch</button>
+          </div>
+          <span class="text-[10px] text-slate-400 block">Try entering <strong class="font-mono text-slate-600">VRL-98421</strong> or <strong class="font-mono text-slate-600">ZNG-4412</strong></span>
+        </div>
+        <div id="fetched-ticket-preview" class="hidden space-y-3 p-4 bg-emerald-50/60 rounded-xl border border-emerald-200">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-emerald-900"><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Ticket Verified from Operator DB</span>
+            <span id="preview-operator" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">VRL Travels</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-700">
+            <div>Route: <strong id="preview-route" class="text-slate-900">Bengaluru → Hyderabad</strong></div>
+            <div>Date: <strong id="preview-date" class="text-slate-900">23-Oct-2026</strong></div>
+            <div>Departure: <strong id="preview-dep" class="text-slate-900">10:30 PM</strong></div>
+            <div>Dropping Time: <strong id="preview-arr" class="text-slate-900">06:00 AM</strong></div>
+            <div>Seat: <strong id="preview-seat" class="text-slate-900">U3</strong></div>
+            <div>Original MRP: <strong id="preview-mrp" class="text-slate-900 font-mono">₹1,100</strong></div>
+          </div>
+        </div>
+        <div id="pricing-section" class="hidden p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <label class="block font-bold text-slate-700 mb-1">Resale Selling Price (₹) *</label>
+          <input type="number" id="sell-price" oninput="validatePricingRules()" placeholder="950" required min="50" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono font-bold">
+          <div id="price-cap-warning" class="hidden p-2.5 bg-rose-50 text-rose-700 rounded-lg border border-rose-200">Selling price cannot exceed original ticket MRP.</div>
+        </div>
+        <div id="upi-section" class="hidden space-y-3">
+          <label class="block font-bold text-slate-700 mb-1">Your UPI ID for Instant Payout *</label>
+          <input type="text" id="sell-upi" placeholder="name@oksbi" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono">
+          <button type="submit" id="btn-submit-listing" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs">Publish Verified Listing</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-buy" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl border border-slate-100">
+      <div class="sticky top-0 bg-white px-6 py-4 border-b border-slate-200 flex items-center justify-between z-10">
+        <h3 class="text-base font-bold text-slate-900">Confirm Passenger & Checkout</h3>
+        <button onclick="closeBuyModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-6 space-y-4 text-xs">
+        <div id="buy-ticket-summary" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2"></div>
+        <form id="checkout-form" onsubmit="handleCheckoutSubmit(event)" class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Full Name *</label>
+              <input type="text" id="buyer-name" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Phone *</label>
+              <input type="tel" id="buyer-phone" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono">
+            </div>
+          </div>
+          <button type="submit" id="btn-pay-escrow" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs">Pay & Transfer Instantly</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script State & Logic -->
+  <script>
+    let currentUser = null;
+    let userWallet = { available: 2450, escrowLocked: 999, lifetimeEarned: 3820 };
+    let transactions = [
+      { id: "TXN-88412", date: "23-Oct-2026", type: "purchase", title: "Instant Ticket Purchase", route: "Bengaluru → Hyderabad", operator: "VRL Travels", amount: -999, status: "Instant Settled", statusColor: "emerald" }
+    ];
+    let pnrDatabase = {
+      "VRL-98421": { operator: "VRL Travels", busType: "AC Sleeper", from: "Bengaluru", to: "Hyderabad", date: "2026-10-23", departureTime: "10:30 PM", arrivalTime: "06:00 AM", seatNumber: "U3", genderSafe: "Female-Safe", originalMrp: 1100, pnr: "VRL-98421" },
+      "ZNG-4412": { operator: "Zingbus", busType: "AC Sleeper", from: "Bengaluru", to: "Goa", date: "2026-10-24", departureTime: "09:00 PM", arrivalTime: "07:30 AM", seatNumber: "L5", genderSafe: "Any", originalMrp: 1450, pnr: "ZNG-4412" }
+    };
+    let listings = [
+      { id: "TX-101", operator: "VRL Travels", busType: "AC Sleeper", from: "Bengaluru", to: "Hyderabad", date: "2026-10-23", departureTime: "10:30 PM", arrivalTime: "06:00 AM", seatNumber: "U3", genderSafe: "Female-Safe", originalMrp: 1100, resalePrice: 950, sellerName: "Aditi M.", sellerRating: "4.9", pnr: "VRL-89412" },
+      { id: "TX-102", operator: "Zingbus", busType: "AC Sleeper", from: "Bengaluru", to: "Goa", date: "2026-10-24", departureTime: "09:00 PM", arrivalTime: "07:30 AM", seatNumber: "L5", genderSafe: "Any", originalMrp: 1450, resalePrice: 1200, sellerName: "Rahul K.", sellerRating: "5.0", pnr: "ZNG-4412" }
+    ];
+    let myListings = [];
+    let myPurchasedPasses = [];
+    let currentSelectedTicket = null;
+    let fetchedTicketData = null;
+    let qrRefreshSeconds = 20;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTicketCards();
+      renderWalletBalances();
+      renderTransactionLedger('all');
+      renderPurchasedPasses();
+    });
+
+    function switchTab(tabId) {
+      ['browse', 'mytickets', 'wallet', 'safety'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        document.getElementById(`nav-${t}`).classList.remove('text-brand-600', 'bg-brand-50');
+      });
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      document.getElementById(`nav-${tabId}`).classList.add('text-brand-600', 'bg-brand-50');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function openLoginModal() { document.getElementById('modal-login').classList.remove('hidden'); }
+    function closeLoginModal() { document.getElementById('modal-login').classList.add('hidden'); }
+    function sendOtp() {
+      document.getElementById('login-step-1').classList.add('hidden');
+      document.getElementById('login-step-2').classList.remove('hidden');
+      showToast("OTP sent: 1234", "success");
+    }
+    function verifyOtp() {
+      currentUser = { phone: "9876543210", name: "Rahul Sharma", upi: "rahul@oksbi" };
+      document.getElementById('user-profile-name').innerText = currentUser.name;
+      closeLoginModal();
+      showToast("Welcome back, Rahul!", "success");
+    }
+
+    function renderWalletBalances() {
+      document.getElementById('nav-wallet-balance').innerText = `₹${userWallet.available}`;
+      document.getElementById('wallet-available-kpi').innerText = `₹${userWallet.available}`;
+      document.getElementById('wallet-escrow-kpi').innerText = `₹${userWallet.escrowLocked}`;
+      document.getElementById('wallet-lifetime-kpi').innerText = `₹${userWallet.lifetimeEarned}`;
+    }
+
+    function renderTransactionLedger(filter = 'all') {
+      const tbody = document.getElementById('transaction-tbody');
+      tbody.innerHTML = '';
+      let combined = [];
+      if (filter === 'all' || filter === 'sale') {
+        myListings.forEach(l => combined.push({ id: l.id, date: "Active", type: "sale", title: `Listed: Seat ${l.seatNumber}`, route: `${l.from} → ${l.to}`, operator: l.operator, amount: l.resalePrice, status: "Active", statusColor: "amber", isListing: true, listingId: l.id }));
+      }
+      transactions.forEach(t => { if (filter === 'all' || t.type === filter) combined.push({ ...t, isListing: false }); });
+      if (combined.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No records found.</td></tr>`; return; }
+      combined.forEach(tx => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="py-3 px-4 font-mono"><strong>${tx.id}</strong><span class="block text-[10px] text-slate-400">${tx.date}</span></td><td class="py-3 px-4">${tx.title}</td><td class="py-3 px-4">${tx.route}</td><td class="py-3 px-4">${tx.status}</td><td class="py-3 px-4 text-right font-mono">${tx.isListing ? '<button onclick="cancelListing(\''+tx.listingId+'\')" class="text-rose-600 font-bold">Cancel</button>' : '₹'+tx.amount}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function cancelListing(id) {
+      myListings = myListings.filter(l => l.id !== id);
+      renderTransactionLedger('all');
+      showToast("Listing cancelled.", "success");
+    }
+
+    function renderTicketCards(list = listings) {
+      const grid = document.getElementById('tickets-grid');
+      const emptyState = document.getElementById('no-tickets-found');
+      grid.innerHTML = '';
+      if (list.length === 0) { emptyState.classList.remove('hidden'); return; }
+      emptyState.classList.add('hidden');
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between";
+        card.innerHTML = `<div><div class="flex justify-between font-bold text-brand-700"><span>${item.operator}</span><span>₹${item.resalePrice}</span></div><div class="my-3">${item.from} → ${item.to} (${item.date})</div><div class="text-xs text-slate-500">Seat: ${item.seatNumber}</div></div><button onclick="openBuyModal('${item.id}')" class="mt-4 py-2 bg-brand-600 text-white rounded-lg text-xs font-bold">Buy with Escrow</button>`;
+        grid.appendChild(card);
+      });
+    }
+
+    function openSellModal() {
+      if (!currentUser) { openLoginModal(); return; }
+      document.getElementById('modal-sell').classList.remove('hidden');
+    }
+    function closeSellModal() { document.getElementById('modal-sell').classList.add('hidden'); }
+    function autoFetchTicketDetails() {
+      const pnr = document.getElementById('sell-pnr-input').value.trim().toUpperCase();
+      const data = pnrDatabase[pnr];
+      if (!data) { showToast("PNR not found. Try 'VRL-98421'", "error"); return; }
+      fetchedTicketData = data;
+      document.getElementById('fetched-ticket-preview').classList.remove('hidden');
+      document.getElementById('pricing-section').classList.remove('hidden');
+      document.getElementById('upi-section').classList.remove('hidden');
+    }
+    function validatePricingRules() {}
+    function handleSellSubmit(e) {
+      e.preventDefault();
+      const price = parseFloat(document.getElementById('sell-price').value);
+      const newL = { id: "TX-" + Math.floor(100+Math.random()*900), ...fetchedTicketData, resalePrice: price, sellerName: currentUser.name };
+      listings.unshift(newL);
+      myListings.unshift(newL);
+      closeSellModal();
+      renderTicketCards();
+      renderTransactionLedger('all');
+      showToast("Seat listed successfully!", "success");
+    }
+
+    function openBuyModal(id) {
+      currentSelectedTicket = listings.find(t => t.id === id);
+      document.getElementById('buy-ticket-summary').innerHTML = `<strong>${currentSelectedTicket.operator}</strong> (${currentSelectedTicket.from} → ${currentSelectedTicket.to})`;
+      document.getElementById('modal-buy').classList.remove('hidden');
+    }
+    function closeBuyModal() { document.getElementById('modal-buy').classList.add('hidden'); }
+    function handleCheckoutSubmit(e) {
+      e.preventDefault();
+      myPurchasedPasses.unshift({ ...currentSelectedTicket, bookingRef: "TXS-8821", otp: "4912", settledAmount: currentSelectedTicket.resalePrice });
+      listings = listings.filter(t => t.id !== currentSelectedTicket.id);
+      closeBuyModal();
+      renderTicketCards();
+      renderPurchasedPasses();
+      switchTab('mytickets');
+      showToast("Ticket purchased successfully!", "success");
+    }
+
+    function renderPurchasedPasses() {
+      const container = document.getElementById('purchased-passes-container');
+      container.innerHTML = '';
+      if (myPurchasedPasses.length === 0) { container.innerHTML = `<p class="text-xs text-slate-400">No purchased passes.</p>`; return; }
+      myPurchasedPasses.forEach(pass => {
+        container.innerHTML += `<div class="bg-white p-5 rounded-xl border border-slate-200"><strong>${pass.operator}</strong> (${pass.from} → ${pass.to}) - Seat ${pass.seatNumber}</div>`;
+      });
+    }
+
+    function showToast(msg, type='info') {
+      const c = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = "bg-slate-900 text-white px-4 py-2 rounded-lg text-xs";
+      t.innerText = msg;
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+  </script>
+</body>
+</html>
